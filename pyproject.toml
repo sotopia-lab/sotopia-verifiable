@@ -5,7 +5,7 @@ description = "A verifiable extension for Sotopia platform."
 authors = [
     { name = "Xuhui Zhou", email = "xuhuiz@cs.cmu.edu" }
 ]
-requires-python = ">=3.10, <3.13"
+requires-python = "==3.12.*"
 license = { text = "MIT License" }
 readme = "README.md"
 
