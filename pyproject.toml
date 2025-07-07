@@ -1,0 +1,47 @@
+[project]
+name = "sotopia-verifiable"
+version = "0.1.0"
+description = "A verifiable extension for Sotopia platform."
+authors = [
+    { name = "Xuhui Zhou", email = "xuhuiz@cs.cmu.edu" }
+]
+requires-python = ">=3.10, <3.13"
+license = { text = "MIT License" }
+readme = "README.md"
+
+dependencies = [
+    "sotopia>=0.1.4",
+    "pydantic>=2.5.0,<3.0.0",
+    "rich>=13.6.0,<15.0.0",
+    "absl-py>=2.0.0,<3.0.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-cov", "pytest-asyncio"]
+
+[tool.uv]
+dev-dependencies = [
+    "pre-commit",
+    "types-setuptools",
+    "types-requests",
+    "ruff",
+    "mypy"
+]
+
+[tool.mypy]
+mypy_path = "stubs"
+strict = true
+plugins = [
+    "pydantic.mypy"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[project.scripts]
+sotopia-verifiable = "sotopia_verifiable.cli:app"
