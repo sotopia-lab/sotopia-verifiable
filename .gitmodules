@@ -1,0 +1,3 @@
+[submodule "sotopia-rl"]
+	path = sotopia-rl
+	url = git@github.com:Keyu-He/sotopia-rl.git
