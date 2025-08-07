@@ -207,3 +207,50 @@ marimo/_lsp/
 __marimo__/
 
 redis-data/*
+
+# Project-specific files to ignore
+RESEARCH_PROGRESS_REPORT_*.md
+PROGRESS_REPORT_*.md
+CODE_CLEANUP_ANALYSIS.md
+CLEANUP_RECOMMENDATIONS.md
+FINAL_CLEANUP_SUMMARY.md
+
+# Training artifacts
+**/checkpoints/
+**/grpo_checkpoints/
+**/rm_checkpoints*/
+**/sft_checkpoints*/
+training_results*/
+fresh_training_results*/
+archive/
+
+# WandB artifacts
+wandb/
+**/wandb/
+
+# Training logs and outputs
+*.log
+training_log.out
+*_training.log
+training_*.log
+
+# Data files (scenario databases can be regenerated)
+scenarios.db
+*.rdb
+temp-*.rdb
+
+# Model artifacts and large files
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Configuration files with potentially sensitive data
+training_config.json
+*_config.json
+
+# Temporary and cache files
+*.tmp
+*.bak
+*.old
+*~
