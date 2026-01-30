@@ -1,0 +1,2 @@
+- data.train_files=/usr2/keyuh/sotopia-verifiable/data/werewolf_trajectories_test.parquet
+- data.val_files=/usr2/keyuh/sotopia-verifiable/data/werewolf_trajectories_test.parquet

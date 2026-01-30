@@ -1,139 +1,72 @@
-# Sotopia-Verifiable
+# Sotopia-Verifiable: Werewolf Training Pipeline
 
-Training social AI agents through self-play with verifiable rewards. Instead of relying on subjective human ratings or LLM judges, we use scenarios with explicit rules and binary win/loss conditions that can be formally verified.
+This repository integrates the **Sotopia** Werewolf environment with the **Verl** Reinforcement Learning framework to train a Qwen agent using PPO.
 
-## The Problem
+## 🏗 Architecture Overview
 
-Most social AI training uses feedback that's either subjective (human preferences) or gameable (LLM judges). This leads to reward hacking and inconsistent evaluation. We need a better way.
+We use **Verl's Async Agent Loop** architecture. This differs from standard RLHF (which typically does single-turn Q&A) by moving the entire game interaction inside the inference worker.
 
-## Our Approach
+### The Pipeline Flow
+1.  **Orchestrator (`train_werewolf.py`)**:
+    *   Starts the Ray cluster.
+    *   Loads the PPO config (`werewolf_ppo.yaml`).
+    *   Distributes work to Ray workers.
 
-We train agents on social scenarios where outcomes are objectively verifiable. Think negotiation games with clear rules, resource allocation with defined success criteria, or cooperative tasks with measurable goals. The agent learns through self-play against strategic opponents (currently GPT-4o), getting clean binary rewards based on whether they achieved the scenario's win condition.
+2.  **Make Work (`data/werewolf_train.parquet`)**:
+    *   Verl is data-driven. It asks "What prompts should I train on?".
+    *   Since Werewolf is an environment we just "start", we feed Verl a **Dummy Dataset** (created by `create_dummy_data.py`).
+    *   Each row in the .parquet file triggers one game episode.
 
-## Quick Start
+3.  **Rollout Worker (vLLM + AgentLoop)**:
+    *   Verl sends a "prompt" (e.g., "Game 1") to the vLLM worker.
+    *   Instead of just generating text, the worker triggers our **Custom Agent Loop** (`werewolf_agent_loop.py`).
 
-### Setup
-```bash
-conda activate sotopia-rl
-cd /home/keyuh/sotopia-verifiable
-```
+4.  **The Game Loop (`WerewolfAgentLoop`)**:
+    *   **Initializes**: Calls `SotopiaWerewolfWrapper` to create a fresh Werewolf game.
+    *   **Interacts**:
+        *   **Action**: Uses vLLM `generate()` to get the Trainee's move.
+        *   **Environment**: Calls `wrapper.step()` to process that move and simulate other agents (using GPT-4 or other policies defined in Sotopia).
+        *   **Loop**: Repeats until the game ends.
+    *   **Returns**: A full trajectory of (Prompt, Response, Reward) tokens back to the PPO trainer.
 
-### Run Complete Training Pipeline
-```bash
-python self_play_training.py \
-  --num_iterations 3 \
-  --games_per_scenario 10 \
-  --output_dir training_results
-```
+## 📂 Key Files Explained
 
-This will:
-1. Generate self-play games between your trainee (Qwen2.5-7B) and partner (GPT-4o)
-2. Convert games to training data with binary rewards
-3. Train using GRPO (Group Reward Policy Optimization)
-4. Iterate to improve performance
+### 1. `examples/train_werewolf.py`
+The entry point. It registers our custom `werewolf` worker type so Verl knows it exists, then launches the standard Verl PPO main function.
 
-### Or Run Steps Manually
+### 2. `config/werewolf_ppo.yaml`
+The main configuration file (Hydra format). Key settings:
+*   `rollout.name: vllm`: We use vLLM for fast inference.
+*   `rollout.mode: async`: CRITICAL. Tells Verl we are using the Agent Loop system.
+*   `rollout.agent.default_agent_loop: werewolf`: Points to our custom class.
 
-Collect training data:
-```bash
-python training_data_collector.py \
-  --trainee_model_path None \
-  --num_games 50 \
-  --output_dir training_data
-```
+### 3. `config/agent_loop/werewolf.yaml`
+A small config file that maps the name "werewolf" to the Python class `DidacticAgentLoop`. Loaded dynamically by the AgentLoopManager.
 
-Train the model:
-```bash
-cd fresh_training_results/iteration_1
-bash train_grpo.sh
-```
+### 4. `sotopia_verifiable/workers/werewolf_agent_loop.py`
+**The Core Logic**. This class inherits from `AgentLoopBase`.
+*   It manages the conversation history (User/Assistant turns).
+*   It handles the masking (we only train on the Agent's output, not the Environment's observations).
+*   It calculates the final reward.
 
-Evaluate performance:
-```bash
-python self_play_evaluator.py \
-  --trainee_model_path checkpoints/policy_adapter \
-  --num_games 20 \
-  --output_path results/evaluation.json
-```
+### 5. `sotopia_verifiable/envs/werewolf_env.py`
+**The Bridge**. Sotopia is a complex multi-agent system. This wrapper makes it look like a simple environment:
+*   `setup_game()`: Creates a scenario.
+*   `step()`: Handles the Trainee's action and automatically runs all other agents (Imposters, Villagers) to finish the round.
+*   `_parse_action()`: Ensures the LLM's text output ("I vote for X") becomes a valid game action.
 
-## How It Works
+### 6. `examples/create_dummy_data.py`
+Generates `data/werewolf_train.parquet`.
+*   **Why?** Verl requires an input dataset to define the "epoch".
+*   We generate 100 "dummy" items. This effectively means "Run 100 parallel game episodes per epoch".
 
-### Scenarios
-We generate social interaction scenarios based on established social science theories. Each scenario has:
-- A clear context (negotiation, resource allocation, cooperation task, etc.)
-- Explicit win conditions that can be verified through pattern matching
-- Strategic depth that requires actual reasoning, not just following a script
+## 🚀 How to Run
 
-### Training Loop
-1. Load scenario from database
-2. Run conversation between trainee and partner
-3. Verify outcome using formal patterns (FINAL_BID, ALLOCATION, etc.)
-4. Assign binary reward (+1 win, -1 loss, 0 draw)
-5. Update model using GRPO with LoRA adapters
-
-### Technical Stack
-- **Base Model:** Qwen2.5-7B with LoRA (392M trainable params)
-- **Partner Model:** GPT-4o (fixed, provides strategic opposition)
-- **Training:** GRPO with binary rewards
-- **Infrastructure:** Multi-GPU support, WandB tracking
-
-## Project Structure
-
-```
-sotopia-verifiable/
-├── scenarios/                    # Scenario generation and database
-│   ├── scenario_generator.py
-│   ├── scenarios.db
-│   └── db_helper.py
-├── self_play_evaluator.py       # Core self-play framework
-├── training_data_collector.py   # Convert games to training data
-├── structured_social_verifier.py # Outcome verification
-├── fresh_training_results/       # Training experiments
-│   └── iteration_1/
-│       ├── train_grpo.sh
-│       ├── training_data/
-│       └── checkpoints/
-└── sotopia-rl/                  # Training infrastructure
-```
-
-## Monitoring Progress
-
-Training metrics are automatically tracked on WandB: https://wandb.ai/keyuhe/grpo-model-training
-
-Expected progression:
-- Iteration 1: ~45% win rate vs GPT-4o
-- Iteration 2: ~60% win rate with better strategic understanding
-- Iteration 3: ~70% win rate with improved social awareness
-
-## Current Status
-
-The training pipeline is operational and we're running initial experiments. First results show the approach is working - agents are learning to win scenarios through strategic interaction rather than just mimicking patterns.
-
-### What's Working
-- Scenario generation from social science theories
-- Self-play game execution with GPT-4o
-- Formal verification of outcomes
-- GRPO training with LoRA adapters
-
-### What We're Improving
-- Scenario diversity and complexity
-- Partner model selection (considering curriculum learning)
-- Evaluation metrics beyond win rate
-- Transfer to open-ended social interaction
-
-## For Contributors
-
-### Prerequisites
-- CUDA-capable GPU (tested on RTX A6000)
-- Python 3.10+ with PyTorch
-- OpenAI API access
-- WandB account
-
-### Development
-1. Test basic functionality: `python test_self_play.py`
-2. Generate new scenarios: `cd scenarios && python scenario_generator.py`
-3. Run training experiments
-4. Monitor on WandB
-5. Evaluate and iterate
-
-The codebase is actively being developed. Feel free to explore and experiment with different approaches to scenario design, reward structures, and training algorithms.
+1.  **Generate Data**:
+    ```bash
+    python examples/create_dummy_data.py
+    ```
+2.  **Start Training**:
+    ```bash
+    python examples/train_werewolf.py --config-path ../config --config-name werewolf_ppo
+    ```
