@@ -1,9 +1,0 @@
-FROM ghcr.io/ggerganov/llama.cpp:server@sha256:5c1b29278f57c1887b63ea45affff1a19fef2e96f55c6b3fcb7b435d1de47437
-
-# Install curl and other necessary utilities
-RUN apt-get update && \
-    apt-get install -y curl && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl -L https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q8_0.gguf --output Llama-3.2.gguf
-
-CMD ["-m", "Llama-3.2.gguf", "--port", "8000"]

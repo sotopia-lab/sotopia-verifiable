@@ -1,0 +1,81 @@
+diff --git a/examples/experimental/games/werewolves/config.json b/examples/experimental/games/werewolves/config.json
+index 6665e40c..78f583f0 100644
+--- a/examples/experimental/games/werewolves/config.json
++++ b/examples/experimental/games/werewolves/config.json
+@@ -1,5 +1,13 @@
+ {
+   "scenario": "Werewolves Game",
++  "agents": [
++    {"name": "Player1", "role": "Villager", "team": "Villagers", "agent_model": "gpt-4o"},
++    {"name": "Player2", "role": "Villager", "team": "Villagers", "agent_model": "gpt-4o"},
++    {"name": "Player3", "role": "Werewolf", "team": "Werewolves", "agent_model": "gpt-4o"},
++    {"name": "Player4", "role": "Werewolf", "team": "Werewolves", "agent_model": "gpt-4o"},
++    {"name": "Player5", "role": "Seer", "team": "Villagers", "agent_model": "gpt-4o"},
++    {"name": "Player6", "role": "Witch", "team": "Villagers", "agent_model": "gpt-4o"}
++  ],
+   "description": "This game is called Werewolves (also known as Mafia), which is a social deduction game.  GAME STRUCTURE: This game contains six players: two villagers, two werewolves, one seer, and one witch. Each cycle consists of Night phases followed by Day phases. WIN CONDITIONS: Villagers win by eliminating all Werewolves. Werewolves win when they equal or outnumber the Villagers. NIGHT PHASES: (1) Werewolves wake and privately choose one Villager to kill using 'kill NAME'. (2) The Seer wakes and inspects one player using 'inspect NAME' to learn if they are a Werewolf or Villager. (3) The Witch wakes and may use their one-time save potion with 'save NAME' (if someone died tonight) or their one-time poison potion with 'poison NAME' to kill someone. DAY PHASES: (1) Dawn: All players learn who died during the night (if any). (2) Discussion: All living players go *one* round of public discussion to discuss and debate who might be a Werewolf. Use 'speak' to share your thoughts and suspicions. (3) Voting: Each player votes to eliminate one suspected Werewolf using 'vote NAME'. The player with the most votes is executed. (4) Twilight: The execution result is announced and night returns. COMMUNICATION RULES: All day discussions are public. Dead players cannot speak or act. If 'action' is available, use commands like 'kill NAME', 'inspect NAME', 'save NAME', 'poison NAME', or 'vote NAME'. Note: Player actions in the nights are not seen by players of other roles (e.g. only wolves can see other wolves' actions). Day discussion is public. Voting requires an 'action' beginning with 'vote'.\n\n The players in this game are: {agent_names}, and during the day, they speak in the same order as they are listed.",
+   "role_goals": {
+     "Villager": "Act openly and collaboratively to identify werewolves.",
+diff --git a/examples/experimental/games/werewolves/main.py b/examples/experimental/games/werewolves/main.py
+index b1006148..3a8f1592 100644
+--- a/examples/experimental/games/werewolves/main.py
++++ b/examples/experimental/games/werewolves/main.py
+@@ -33,8 +33,8 @@ from sotopia.messages import AgentAction, SimpleMessage, Message, Observation
+ BASE_DIR = Path(__file__).resolve().parent
+ CONFIG_PATH = BASE_DIR / "config.json"
+ 
+-os.environ.setdefault("REDIS_OM_URL", "redis://:@localhost:6379")
+-redis.Redis(host="localhost", port=6379)
++os.environ.setdefault("REDIS_OM_URL", "redis://:@localhost:6380")
++# Note: Redis connection is established lazily by sotopia, no eager connection needed
+ 
+ # Loggers (configured in main if running standalone)
+ _gen_logger = logging.getLogger("sotopia.generation")
+diff --git a/examples/experimental/games/werewolves/roster.json b/examples/experimental/games/werewolves/roster.json
+index b3ad22b9..d3236644 100644
+--- a/examples/experimental/games/werewolves/roster.json
++++ b/examples/experimental/games/werewolves/roster.json
+@@ -4,37 +4,37 @@
+             "name": "Aurora",
+             "role": "Villager",
+             "team": "Villagers",
+-            "agent_model": "gpt-4o"
++            "agent_model": "gpt-5"
+         },
+         {
+             "name": "Bram",
+             "role": "Werewolf",
+             "team": "Werewolves",
+-            "agent_model": "gpt-4o"
++            "agent_model": "gpt-5"
+         },
+         {
+             "name": "Celeste",
+             "role": "Seer",
+             "team": "Villagers",
+-            "agent_model": "gpt-4o"
++            "agent_model": "gpt-5"
+         },
+         {
+             "name": "Dorian",
+             "role": "Werewolf",
+             "team": "Werewolves",
+-            "agent_model": "gpt-4o"
++            "agent_model": "gpt-5"
+         },
+         {
+             "name": "Elise",
+             "role": "Witch",
+             "team": "Villagers",
+-            "agent_model": "gpt-4o"
++            "agent_model": "gpt-5"
+         },
+         {
+             "name": "Finn",
+             "role": "Villager",
+             "team": "Villagers",
+-            "agent_model": "gpt-4o"
++            "agent_model": "gpt-5"
+         }
+     ]
+ }

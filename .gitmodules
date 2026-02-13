@@ -1,3 +1,7 @@
 [submodule "dependencies/verl"]
 	path = dependencies/verl
 	url = https://github.com/volcengine/verl
+[submodule "dependencies/sotopia"]
+	path = dependencies/sotopia
+	url = git@github.com:Keyu-He/sotopia.git
+	branch = feature/elo-eval
